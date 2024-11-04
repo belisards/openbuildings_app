@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "openbuildings-app"
+version = "0.1.0"
+description = ""
+authors = ["belisards <adrianobf@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+streamlit = "^1.39.0"
+folium = "^0.18.0"
+streamlit-folium = "^0.23.1"
+geojson = "^3.1.0"
+shapely = "^2.0.6"
+pyproj = "^3.7.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
