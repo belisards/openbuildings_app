@@ -35,7 +35,7 @@ def get_imagery_dates(bounds, zoom_level):
     Query ESRI World Imagery service for image dates within the given bounds.
     """
     if zoom_level < 12:
-        st.info("Please zoom in to level 12 or higher to see imagery dates.")
+        st.sidebar.info("Please zoom in to level 12 or higher to see imagery dates.")
         return {}
         
     base_url = "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/0/query"
@@ -63,7 +63,7 @@ def get_imagery_dates(bounds, zoom_level):
         data = response.json()
         
         if 'features' not in data:
-            st.error("No imagery data received from the server.")
+            st.sidebar.error("No imagery data received from the server.")
             return {}
             
         dates_dict = {}
@@ -78,13 +78,17 @@ def get_imagery_dates(bounds, zoom_level):
         return dates_dict
         
     except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching imagery dates: {str(e)}")
+        st.sidebar.error(f"Error fetching imagery dates: {str(e)}")
         return {}
 
-def create_map_with_dates():
-    st.title("GOB data")
+def main():
+    st.title("Open Buildings Explorer")
     
-    uploaded_file = st.file_uploader("Upload a GeoJSON file", type="geojson")
+    # Create sidebar
+    st.sidebar.title("Controls")
+    
+    # Move file uploader to sidebar
+    uploaded_file = st.sidebar.file_uploader("Upload a GeoJSON file", type="geojson")
     
     if uploaded_file is not None:
         try:
@@ -92,7 +96,8 @@ def create_map_with_dates():
             features = geojson_data['features']
             feature_names = [feature['properties'].get('name', f'Feature {i}') for i, feature in enumerate(features)]
             
-            selected_feature_name = st.selectbox("Select a feature to display", feature_names)
+            # Move feature selection to sidebar
+            selected_feature_name = st.sidebar.selectbox("Select a feature to display", feature_names)
             selected_feature = next(
                 (feature for feature in features if feature['properties'].get('name') == selected_feature_name), 
                 None
@@ -100,6 +105,14 @@ def create_map_with_dates():
             
             if selected_feature:
                 geometry = shape(selected_feature['geometry'])
+           
+                # Convert geometry to WKT format
+                wkt_representation = geometry.wkt
+                
+                # Display WKT in the sidebar
+                st.sidebar.markdown("---")
+                st.sidebar.subheader("WKT Format")
+                st.sidebar.text_area("WKT Representation", wkt_representation, height=100)
                 
                 if geometry.geom_type == 'Point':
                     center_lat, center_lon = geometry.y, geometry.x
@@ -107,62 +120,42 @@ def create_map_with_dates():
                     centroid = geometry.centroid
                     center_lat, center_lon = centroid.y, centroid.x
                 
+                # Main area: Display map
                 m = folium.Map(location=[center_lat, center_lon], zoom_start=12)
                 
-                # Add ESRI World Imagery basemap
                 folium.TileLayer(
                     tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     attr='ArcGIS World Imagery'
                 ).add_to(m)
                 
-                # Add the GeoJSON data
                 folium.GeoJson(geojson_data).add_to(m)
                 
-                # Display the map and get its bounds and zoom level
                 map_data = st_folium(m, width=700, height=500)
                 
                 if map_data and 'zoom' in map_data and 'bounds' in map_data:
                     zoom_level = map_data['zoom']
                     bounds = map_data['bounds']
                     
+                    # Move zoom level info to sidebar
                     st.write(f"Current zoom level: {zoom_level} (imagery dates load at level 12+)")
                     
                     if zoom_level >= 12 and bounds:
-                        # Convert bounds from Leaflet format to Web Mercator
                         transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
                         sw_x, sw_y = transformer.transform(bounds['_southWest']['lng'], bounds['_southWest']['lat'])
                         ne_x, ne_y = transformer.transform(bounds['_northEast']['lng'], bounds['_northEast']['lat'])
                         
-                        # Get imagery dates
                         dates = get_imagery_dates((sw_x, sw_y, ne_x, ne_y), zoom_level)
                         
                         if dates:
-                            # Display dates as comma-separated list
+                            # Display dates in sidebar
                             date_list = sorted(dates.keys())
-                            st.write("**Available Imagery Dates:**")
+                            st.markdown("---")  # Add a separator
+                            st.write("**Imagery dates:**")
                             st.write(", ".join(date_list))
                             
-                            # Add date overlays to the map
-                            for date, feature in dates.items():
-                                try:
-                                    folium.GeoJson(
-                                        data=feature,
-                                        style_function=lambda x: {
-                                            'fillColor': 'none',
-                                            'color': 'yellow',
-                                            'weight': 1
-                                        },
-                                        tooltip=date
-                                    ).add_to(m)
-                                except Exception as e:
-                                    st.error(f"Error adding overlay for date {date}: {str(e)}")
-                            
-                            # Update the map with the overlays
-                            st_folium(m, width=700, height=500)
-                                
         except Exception as e:
-            st.error(f"Error processing GeoJSON file: {str(e)}")
-            st.error("Please make sure your GeoJSON file is properly formatted.")
+            st.sidebar.error(f"Error processing GeoJSON file: {str(e)}")
+            st.sidebar.error("Please make sure your GeoJSON file is properly formatted.")
 
 if __name__ == "__main__":
-    create_map_with_dates()
+    main()
