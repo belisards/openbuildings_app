@@ -8,7 +8,7 @@ import tensorflow as tf
 import shutil
 from typing import Optional
 import streamlit as st
-
+import gzip
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
@@ -57,6 +57,10 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
 
     output_path = os.path.join(data_dir, f'{s2_code}_buildings.csv.gz')
 
+    # skip if file exists and return the path
+    if os.path.exists(output_path):
+        return output_path
+
     try:
         # Attempt to open and read the file for the provided S2 code.
         with tf.io.gfile.GFile(
@@ -85,13 +89,14 @@ def uncompress(gzipped_file: str, delete_compressed: bool = True) -> Optional[st
 
     Args:
         gzipped_file (str): Path to the gzipped CSV file.
+        delete_compressed (bool): Whether to delete the compressed file after uncompressing.
 
     Returns:
         Optional[str]: Path to the uncompressed CSV file if successful, None otherwise.
     """
 
     try:
-        with tf.io.gfile.GFile(gzipped_file, 'rb') as gf:
+        with gzip.open(gzipped_file, 'rb') as gf:
             with open(gzipped_file.replace('.gz', ''), 'wb') as f:
                 shutil.copyfileobj(gf, f)
 
@@ -100,5 +105,5 @@ def uncompress(gzipped_file: str, delete_compressed: bool = True) -> Optional[st
 
         return gzipped_file.replace('.gz', '')
 
-    except tf.errors.NotFoundError:
+    except FileNotFoundError:
         return None

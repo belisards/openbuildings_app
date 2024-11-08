@@ -1,14 +1,12 @@
+import os 
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
+
 import geojson
 from shapely.geometry import shape
-
-from datetime import datetime
+from shapely.wkt import loads
 from pyproj import Transformer
-import tensorflow as tf
-import s2geometry as s2
-
 
 from openbuildings import *
 from map_features import *
@@ -42,27 +40,17 @@ def main():
             )
             
             if selected_feature:
-                geometry = shape(selected_feature['geometry'])
+                input_geometry = shape(selected_feature['geometry'])
            
                 # Convert geometry to WKT format
-                wkt_representation = geometry.wkt
+                wkt_representation = input_geometry.wkt
                           
                 s2_tokens = wkt_to_s2(wkt_representation)
-                
 
-                if len(s2_tokens) > 0:
-                    # st.sidebar.button("Download GOB Data")
-                    if st.sidebar.button("Download GOB Data",key="download_gob_button"):
-                        os.makedirs(data_dir, exist_ok=True)
-                        for s2_token in s2_tokens:
-                            gob_data_compressed = download_data_from_s2_code(s2_token,data_dir)
-                            gob_data = uncompress(gob_data_compressed)
-                            print(gob_data)
-
-                if geometry.geom_type == 'Point':
-                    center_lat, center_lon = geometry.y, geometry.x
+                if input_geometry.geom_type == 'Point':
+                    center_lat, center_lon = input_geometry.y, input_geometry.x
                 else:
-                    centroid = geometry.centroid
+                    centroid = input_geometry.centroid
                     center_lat, center_lon = centroid.y, centroid.x
                 
                 # Main area: Display map
@@ -97,7 +85,69 @@ def main():
                             st.markdown("---")  # Add a separator
                             st.write("**Imagery dates:**")
                             st.write(", ".join(date_list))
+            
+                ################################ DOWNLOAD GOB DATA ################################
+                if len(s2_tokens) > 0:
+                    # st.sidebar.button("Download GOB Data")
+                    if st.sidebar.button("Download GOB Data",key="download_gob_button"):
+
+                        # create a placeholder for warning msgs to the user
+                        user_warning = st.sidebar.empty()
+                        # create dir if don't exist
+                        os.makedirs(data_dir, exist_ok=True)
+
+                        # empty the folder
+                        for file in os.listdir(data_dir):
+                            os.remove(os.path.join(data_dir, file))
+                        # download data
+                        for s2_token in s2_tokens:
+                            # st.sidebar.info(f"Downloading GOB data for S2 token: {s2_token}")
+                            user_warning.info(f"Downloading GOB data for S2 token: {s2_token}")
+                            try:
+                                gob_data_compressed = download_data_from_s2_code(s2_token,data_dir)
+                                gob_filepath = uncompress(gob_data_compressed, delete_compressed=False)
+                                st.sidebar.success(f"GOB data for {s2_token} downloaded successfully.")
+                            except Exception as e:
+                                st.sidebar.error(f"Error downloading GOB data for S2 token: {s2_token}")
+                                st.sidebar.error(str(e))
+                                continue
+                        
+
+                        ##################################### load gob data
+                        # st.sidebar.info("Loading GOB data...")
+                        user_warning.info("Loading GOB data...")
+                        print(gob_filepath)
+
+                        # col names taken from the official gob notebook
+                        header = ['latitude', 'longitude', 'area_in_meters', 'confidence', 'geometry','full_plus_code']
+                        try: 
+                            # create a gpd.GeoDataFrame()
+                            # gob_data = gpd.read_file(gob_filepath)
                             
+                            gob_data = pd.read_csv(gob_filepath)
+                            # add header
+                            gob_data.columns = header
+                            gob_data['geometry'] = gob_data['geometry'].apply(loads) # convert WKT to shapely geometry
+                            gob_gdf = gpd.GeoDataFrame(gob_data, crs='EPSG:4326') # transform to gpd.GeoDataFrame
+                                 # st.sidebar.success("GOB data loaded successfully.")
+                            user_warning.success("GOB data loaded successfully.")
+
+                        except Exception as e:
+                            st.sidebar.error(f"Error loading GOB data: {str(e)}")
+                            st.sidebar.error("Please make sure the downloaded file is a valid CSV file.")
+                            return
+
+                   
+                        # filter and plot gob data
+                        user_warning.info("Filtering GOB data...")
+                        # filter gob_gdf and the geojson input selected by the user
+                        filtered_gob_gdf = gob_gdf[gob_gdf.intersects(input_geometry)]
+                        user_warning.warning(f"Filtered {len(filtered_gob_gdf)} GOB data points.")
+################################################################################# 
+                        # plot in the map the filtered_gob_df
+
+
+
         except Exception as e:
             st.sidebar.error(f"Error processing GeoJSON file: {str(e)}")
             st.sidebar.error("Please make sure your GeoJSON file is properly formatted.")
