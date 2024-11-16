@@ -12,7 +12,7 @@ from google_openbuildings import *
 from map_features import *
 from file_manager import *
 
-data_dir = './data'
+data_dir = './'
 APP_TITLE = "Open Buildings Explorer"
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 
@@ -100,7 +100,7 @@ def create_base_map(lat, lon):
 
 def download_and_process_gob_data(s2_tokens, input_geometry):
     user_warning = st.sidebar.empty()  
-    os.makedirs(data_dir, exist_ok=True)
+    # os.makedirs(data_dir, exist_ok=True)
 
     for s2_token in s2_tokens:
         print(f"Downloading GOB data for S2 token: {s2_token}. Please wait...")
