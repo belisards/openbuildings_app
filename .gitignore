@@ -1,3 +1,7 @@
+./streamlit/secrets.toml
+secrets.toml
+./streamlit/*
+
 *.csv
 *.gz
 poetry.lock
