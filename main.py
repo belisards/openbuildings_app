@@ -152,6 +152,8 @@ def download_and_process_gob_data(s2_tokens, input_geometry):
         user_warning.info(f"Downloading GOB data for S2 token: {s2_token}. Please wait...")
         try:
             gob_data_compressed = download_data_from_s2_code(s2_token, data_dir)
+            # gob_filepath = gob_data_compressed
+            
             gob_filepath = uncompress(gob_data_compressed, delete_compressed=False)
             # st.sidebar.info(f"GOB data for {s2_token} downloaded successfully.")
         except Exception as e:

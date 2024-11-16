@@ -19,6 +19,8 @@ tensorflow = "^2.18.0"
 tqdm = "^4.66.6"
 google-cloud = "^0.34.0"
 google-cloud-storage = "^2.18.2"
+fsspec = "^2024.10.0"
+gcsfs = "^2024.10.0"
 
 
 [tool.poetry.group.dev.dependencies]
