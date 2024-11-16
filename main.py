@@ -147,7 +147,7 @@ def main():
     if uploaded_file:
         process_uploaded_file(uploaded_file)
         if st.session_state.s2_tokens and st.sidebar.button("Fetch GOB Data", key="download_gob_button"):
-            remove_folder_contents(data_dir)
+            # remove_folder_contents(data_dir)
             download_and_process_gob_data(st.session_state.s2_tokens, st.session_state.input_geometry)
         if st.session_state.info_box_visible:
             display_fixed_info_box()
