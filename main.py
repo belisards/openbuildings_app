@@ -12,7 +12,7 @@ from google_openbuildings import *
 from map_features import *
 from file_manager import *
 
-data_dir = './'
+data_dir = './data/'
 APP_TITLE = "Open Buildings Explorer"
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 
