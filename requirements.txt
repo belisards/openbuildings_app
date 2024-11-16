@@ -6,8 +6,9 @@ geojson~=3.1.0
 shapely~=2.0.6
 pyproj~=3.7.0
 ipython~=8.29.0
-s2geometry~=0.9.0
 tensorflow~=2.18.0
 tqdm~=4.66.6
 google-cloud~=0.34.0
 google-cloud-storage~=2.18.2
+# s2geometry~=0.9.0
+./s2geometry-0.9.0-cp310-cp310-linux_x86_64.whl
