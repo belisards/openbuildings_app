@@ -1,27 +1,7 @@
 
 import requests
 import json
-def convert_esri_feature_to_geojson(esri_feature):
-    """
-    Convert ESRI Feature to GeoJSON format
-    """
-    try:
-        geojson_feature = {
-            "type": "Feature",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": []
-            },
-            "properties": esri_feature.get('attributes', {})
-        }
-        
-        if 'geometry' in esri_feature and 'rings' in esri_feature['geometry']:
-            geojson_feature['geometry']['coordinates'] = esri_feature['geometry']['rings']
-            
-        return geojson_feature
-    except Exception as e:
-        st.error(f"Error converting ESRI feature to GeoJSON: {str(e)}")
-        return None
+import streamlit as st
 
 def get_imagery_dates(bounds, zoom_level):
     """
@@ -67,9 +47,31 @@ def get_imagery_dates(bounds, zoom_level):
                 geojson_feature = convert_esri_feature_to_geojson(feature)
                 if geojson_feature:
                     dates_dict[formatted_date] = geojson_feature
-                
-        return dates_dict
+        # print(dates_dict.keys())
+        return dates_dict.keys()
         
     except requests.exceptions.RequestException as e:
         st.sidebar.error(f"Error fetching imagery dates: {str(e)}")
         return {}
+    
+def convert_esri_feature_to_geojson(esri_feature):
+    """
+    Convert ESRI Feature to GeoJSON format
+    """
+    try:
+        geojson_feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": []
+            },
+            "properties": esri_feature.get('attributes', {})
+        }
+        
+        if 'geometry' in esri_feature and 'rings' in esri_feature['geometry']:
+            geojson_feature['geometry']['coordinates'] = esri_feature['geometry']['rings']
+            
+        return geojson_feature
+    except Exception as e:
+        st.error(f"Error converting ESRI feature to GeoJSON: {str(e)}")
+        return None

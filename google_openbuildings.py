@@ -73,18 +73,18 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
     # Ensure data directory exists
     os.makedirs(data_dir, exist_ok=True)
     
-    st.sidebar.write(f"Downloading data to: {output_path}")
+    # st.sidebar.write(f"Downloading data to: {output_path}")
     
     # Check if the file already exists
     if os.path.exists(output_path):
-        st.write(f"File already exists at: {output_path}")
+        print(f"File already exists: {output_path}")
         return output_path
 
     try:
         # Construct the GCS path
         conn = st.connection('gcs', type=FilesConnection)
         gcs_path = os.path.join(BUILDING_DOWNLOAD_PATH, f'{s2_code}_buildings.csv.gz')
-        st.sidebar.write(f"Downloading data from: {gcs_path}")
+        # st.sidebar.write(f"Downloading data from: {gcs_path}")
         
         # Open GCS file and get its total size
         with conn.open(gcs_path, 'rb') as f:
@@ -93,7 +93,7 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
                 total_size = 0
             else:
                 total_size = f.size
-                st.sidebar.write(f"Total file size: {total_size} bytes")
+                # st.sidebar.write(f"Total file size: {total_size} bytes")
             
             # Initialize progress bar
             status_text = st.sidebar.empty()

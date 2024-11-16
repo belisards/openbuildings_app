@@ -1,3 +1,7 @@
+# Relevant changes:
+# - Only display the number of buildings after GOB data is loaded.
+# - Move the display of imagery dates below the map instead of in the sidebar.
+
 import os
 import streamlit as st
 import folium
@@ -5,7 +9,7 @@ from streamlit_folium import st_folium
 from folium.plugins import Fullscreen
 import geojson
 from shapely.geometry import shape
-# from pyproj import Transformer
+from pyproj import Transformer
 from io import BytesIO
 import json
 from google_openbuildings import *
@@ -31,7 +35,11 @@ def initialize_session_state():
         'info_box_visible': False,
         'lat': 0,
         'lon': 0,
-        'progress_message': ""
+        'progress_message': "",
+        'input_geometry': None,
+        'bounds': None,
+        'zoom': 0,
+        's2_tokens': [],
     }.items():
         if key not in st.session_state:
             st.session_state[key] = default
@@ -47,7 +55,6 @@ def process_uploaded_file(uploaded_file):
             st.session_state.filtered_gob_data = None
             st.session_state.building_count = 0
             st.session_state.avg_confidence = 0.0
-            st.session_state.imagery_dates = []
             st.session_state.info_box_visible = False
 
         st.session_state.selected_feature_name = selected_feature_name
@@ -76,10 +83,14 @@ def display_selected_feature(selected_feature):
     if st.session_state.filtered_gob_data is not None:
         folium.GeoJson(st.session_state.filtered_gob_data).add_to(m)
 
-    st.session_state.map_data = st_folium(m, width=1200, height=800, returned_objects=[])
+    st.session_state.map_data = st_folium(m, width=1200, height=800)#, returned_objects=[])
+    # print(st.session_state.map_data)
 
     st.session_state.s2_tokens = s2_tokens
     st.session_state.input_geometry = input_geometry
+
+    # Update info box visibility whenever we display a feature
+    # st.session_state.info_box_visible = True
 
 def get_geometry_center(geometry):
     if geometry.geom_type == 'Point':
@@ -100,53 +111,45 @@ def create_base_map(lat, lon):
 
 def download_and_process_gob_data(s2_tokens, input_geometry):
     user_warning = st.sidebar.empty()  
-    # os.makedirs(data_dir, exist_ok=True)
 
     for s2_token in s2_tokens:
-        print(f"Downloading GOB data for S2 token: {s2_token}. Please wait...")
         st.session_state.progress_message = f"Downloading GOB data for S2 token: {s2_token}. Please wait..."
         user_warning.info(st.session_state.progress_message)
 
         try:
             gob_data_compressed = download_data_from_s2_code(s2_token, data_dir)
             gob_filepath = uncompress(gob_data_compressed, delete_compressed=False)
-            # st.session_state.progress_message = f"GOB data for {s2_token} downloaded successfully."
-            # user_warning.info(st.session_state.progress_message)
         except Exception as e:
-            #st.session_state.progress_message = f"Error downloading GOB data for S2 token: {s2_token}"
             st.error(f"Detailed error: {str(e)}")
             print(e)
-            # user_warning.error(st.session_state.progress_message)
-            # user_warning.error(str(e))
             raise
 
-    #user_warning.info(st.session_state.progress_message)
     user_warning.info("Filtering GOB data...")
-    load_and_filter_gob_data(gob_filepath, input_geometry)
-    # st.session_state.progress_message = ""
+    st.session_state.filtered_gob_data = load_and_filter_gob_data(gob_filepath, input_geometry)
+    st.session_state.building_count = len(st.session_state.filtered_gob_data['features'])
     user_warning.empty()
+    st.session_state.info_box_visible = True
 
 def display_fixed_info_box():
     with st.sidebar.expander("GOB Data Summary", expanded=True):
         st.metric(label="Location", value=st.session_state.selected_feature_name, label_visibility="hidden")
         st.write(f"Lat/long: {st.session_state.lat:.6f}, {st.session_state.lon:.6f}")
-        st.metric(label="Total of buildings (% confidence level)", value=f"{st.session_state.building_count} ({st.session_state.avg_confidence:.2f})")
-        if st.session_state.imagery_dates:
-            st.markdown("**Imagery dates:**")
-            st.write(", ".join(st.session_state.imagery_dates) if isinstance(st.session_state.imagery_dates, list) else st.session_state.imagery_dates)
-            if st.session_state.filtered_gob_data is not None:
-                # Serialize the filtered GeoJSON to a string
-                geojson_str = json.dumps(st.session_state.filtered_gob_data, indent=2)
+        st.metric(label="Total of buildings (% confidence level)", 
+                 value=f"{st.session_state.building_count} ({st.session_state.avg_confidence:.2f})")
+        
+        if st.session_state.filtered_gob_data is not None:
+            geojson_str = json.dumps(st.session_state.filtered_gob_data, indent=2)
+            geojson_bytes = BytesIO(geojson_str.encode("utf-8"))
+            st.download_button(
+                label="Download GeoJSON",
+                data=geojson_bytes,
+                file_name="filtered_gob_data.geojson",
+                mime="application/geo+json"
+            )
 
-                # Convert the string to a BytesIO object
-                geojson_bytes = BytesIO(geojson_str.encode("utf-8"))
 
-                st.download_button(
-                    label="Download GeoJSON",
-                    data=geojson_bytes,
-                    file_name="filtered_gob_data.geojson",
-                    mime="application/geo+json"
-                )
+    # Display imagery dates if zoom level is sufficient
+
 
 def main():
     setup_app()
@@ -155,13 +158,37 @@ def main():
 
     if uploaded_file:
         process_uploaded_file(uploaded_file)
-        if st.session_state.s2_tokens and st.sidebar.button("Fetch GOB Data", key="download_gob_button"):
-            # remove_folder_contents(data_dir)
+        # get imagery dates
+        bounds = st.session_state.map_data['bounds']
+        # print(bounds)
+        zoom_level = st.session_state.map_data['zoom']
+        if zoom_level >= 12 and bounds:
+            transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+            sw_x, sw_y = transformer.transform(bounds['_southWest']['lng'], bounds['_southWest']['lat'])
+            ne_x, ne_y = transformer.transform(bounds['_northEast']['lng'], bounds['_northEast']['lat'])
+            # print(sw_x, sw_y, ne_x, ne_y)
+
+            dates = get_imagery_dates((sw_x, sw_y, ne_x, ne_y), zoom_level)
+            if dates:
+                # change to str
+                dates = ", ".join(dates)
+                print(dates)
+                st.session_state.imagery_dates = dates
+                # write
+                st.sidebar.write(f"Imagery dates: {dates}")
+        else:
+            st.session_state.imagery_dates = f"Curent zoom level: {zoom_level} - Imagery dates are only available at zoom level 12 or higher."
+            # write
+        #st.sidebar.write(st.session_state.imagery_dates)
+
+        if st.sidebar.button("Fetch GOB Data", key="download_gob_button"):
             download_and_process_gob_data(st.session_state.s2_tokens, st.session_state.input_geometry)
+            
         if st.session_state.info_box_visible:
             display_fixed_info_box()
-    # if st.session_state.progress_message:
-    #     st.sidebar.info(st.session_state.progress_message)
+    
+    # Display imagery dates below the map
+    
 
 if __name__ == "__main__":
     main()
