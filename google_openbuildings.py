@@ -159,7 +159,7 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
 
 
 def load_and_filter_gob_data(gob_filepath, input_geometry):
-    user_warning = st.sidebar.empty()
+    #user_warning = st.sidebar.empty()
     try:
         header = ['latitude', 'longitude', 'area_in_meters', 'confidence', 'geometry', 'full_plus_code']
         gob_data = pd.read_csv(gob_filepath)
@@ -167,10 +167,10 @@ def load_and_filter_gob_data(gob_filepath, input_geometry):
         gob_data['geometry'] = gob_data['geometry'].apply(loads)
         gob_gdf = gpd.GeoDataFrame(gob_data, crs='EPSG:4326')
 
-        user_warning.info("Filtering GOB data...")
+        
         filtered_gob_gdf = gob_gdf[gob_gdf.intersects(input_geometry)]
         # print(filtered_gob_gdf.info())
-        user_warning.empty()
+        # user_warning.empty()
 
         avg_confidence = filtered_gob_gdf['confidence'].mean()
 
@@ -187,4 +187,4 @@ def load_and_filter_gob_data(gob_filepath, input_geometry):
 
         st.rerun()
     except Exception as e:
-        user_warning.error(f"Error loading GOB data: {str(e)}")
+        print(e)

@@ -5,6 +5,9 @@ import os
 
 
 def remove_folder_contents(folder_path):
+    # check if folder exists
+    if not os.path.exists(folder_path):
+        return
     # Remove local download folder contents
     for file in os.listdir(folder_path):
         file_path = os.path.join(folder_path, file)

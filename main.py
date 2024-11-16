@@ -5,8 +5,9 @@ from streamlit_folium import st_folium
 from folium.plugins import Fullscreen
 import geojson
 from shapely.geometry import shape
-from pyproj import Transformer
-
+# from pyproj import Transformer
+from io import BytesIO
+import json
 from google_openbuildings import *
 from map_features import *
 from file_manager import *
@@ -30,7 +31,7 @@ def initialize_session_state():
         'info_box_visible': False,
         'lat': 0,
         'lon': 0,
-        # 'progress_message': ""
+        'progress_message': ""
     }.items():
         if key not in st.session_state:
             st.session_state[key] = default
@@ -98,13 +99,13 @@ def create_base_map(lat, lon):
     return m
 
 def download_and_process_gob_data(s2_tokens, input_geometry):
-    # user_warning = st.sidebar.empty()  
+    user_warning = st.sidebar.empty()  
     os.makedirs(data_dir, exist_ok=True)
 
     for s2_token in s2_tokens:
         print(f"Downloading GOB data for S2 token: {s2_token}. Please wait...")
-        # st.session_state.progress_message = f"Downloading GOB data for S2 token: {s2_token}. Please wait..."
-        # user_warning.info(st.session_state.progress_message)
+        st.session_state.progress_message = f"Downloading GOB data for S2 token: {s2_token}. Please wait..."
+        user_warning.info(st.session_state.progress_message)
 
         try:
             gob_data_compressed = download_data_from_s2_code(s2_token, data_dir)
@@ -119,9 +120,10 @@ def download_and_process_gob_data(s2_tokens, input_geometry):
             continue
 
     #user_warning.info(st.session_state.progress_message)
+    user_warning.info("Filtering GOB data...")
     load_and_filter_gob_data(gob_filepath, input_geometry)
     # st.session_state.progress_message = ""
-    # user_warning.empty()
+    user_warning.empty()
 
 def display_fixed_info_box():
     with st.sidebar.expander("GOB Data Summary", expanded=True):
@@ -131,13 +133,19 @@ def display_fixed_info_box():
         if st.session_state.imagery_dates:
             st.markdown("**Imagery dates:**")
             st.write(", ".join(st.session_state.imagery_dates) if isinstance(st.session_state.imagery_dates, list) else st.session_state.imagery_dates)
-        if st.session_state.filtered_gob_data is not None:
-            st.download_button(
-                label="Download GeoJSON",
-                data=st.session_state.filtered_gob_geojson,
-                file_name="filtered_gob_data.geojson",
-                mime="application/geo+json"
-            )
+            if st.session_state.filtered_gob_data is not None:
+                # Serialize the filtered GeoJSON to a string
+                geojson_str = json.dumps(st.session_state.filtered_gob_data, indent=2)
+
+                # Convert the string to a BytesIO object
+                geojson_bytes = BytesIO(geojson_str.encode("utf-8"))
+
+                st.download_button(
+                    label="Download GeoJSON",
+                    data=geojson_bytes,
+                    file_name="filtered_gob_data.geojson",
+                    mime="application/geo+json"
+                )
 
 def main():
     setup_app()
