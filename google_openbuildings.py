@@ -140,7 +140,7 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
                     if bytes_read % (8192 * 10) == 0 or bytes_read == total_size:
                         progress = min(bytes_read / total_size, 1.0)
                         # transform bytes to MB
-                        status_text.warning(f"Downloaded {bytes_read / 1e6:.2f} MB of {total_size / 1e6:.2f} MB ({progress * 100:.0f}%)")
+                        status_text.warning(f"Downloaded {bytes_read / 1e6:.1f} MB of {total_size / 1e6:.1f} MB ({progress * 100:.0f}%)")
                         # status_text.warning(f"Downloaded {bytes_read} of {total_size} bytes ({progress * 100:.0f}%)")
 
         # Display final status and remove the status text
@@ -158,7 +158,8 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
         return None
 
 
-def load_and_filter_gob_data(gob_filepath, input_geometry, user_warning):
+def load_and_filter_gob_data(gob_filepath, input_geometry):
+    user_warning = st.sidebar.empty()
     try:
         header = ['latitude', 'longitude', 'area_in_meters', 'confidence', 'geometry', 'full_plus_code']
         gob_data = pd.read_csv(gob_filepath)

@@ -30,7 +30,7 @@ def initialize_session_state():
         'info_box_visible': False,
         'lat': 0,
         'lon': 0,
-        'progress_message': ""
+        # 'progress_message': ""
     }.items():
         if key not in st.session_state:
             st.session_state[key] = default
@@ -98,26 +98,30 @@ def create_base_map(lat, lon):
     return m
 
 def download_and_process_gob_data(s2_tokens, input_geometry):
-    user_warning = st.sidebar.empty()  
+    # user_warning = st.sidebar.empty()  
     os.makedirs(data_dir, exist_ok=True)
 
     for s2_token in s2_tokens:
-        st.session_state.progress_message = f"Downloading GOB data for S2 token: {s2_token}. Please wait..."
-        user_warning.info(st.session_state.progress_message)
+        print(f"Downloading GOB data for S2 token: {s2_token}. Please wait...")
+        # st.session_state.progress_message = f"Downloading GOB data for S2 token: {s2_token}. Please wait..."
+        # user_warning.info(st.session_state.progress_message)
 
         try:
             gob_data_compressed = download_data_from_s2_code(s2_token, data_dir)
             gob_filepath = uncompress(gob_data_compressed, delete_compressed=False)
             # st.session_state.progress_message = f"GOB data for {s2_token} downloaded successfully."
-            user_warning.info(st.session_state.progress_message)
+            # user_warning.info(st.session_state.progress_message)
         except Exception as e:
-            st.session_state.progress_message = f"Error downloading GOB data for S2 token: {s2_token}"
-            user_warning.error(st.session_state.progress_message)
-            user_warning.error(str(e))
+            #st.session_state.progress_message = f"Error downloading GOB data for S2 token: {s2_token}"
+            print(e)
+            # user_warning.error(st.session_state.progress_message)
+            # user_warning.error(str(e))
             continue
 
-    user_warning.info(st.session_state.progress_message)
-    load_and_filter_gob_data(gob_filepath, input_geometry, user_warning)
+    #user_warning.info(st.session_state.progress_message)
+    load_and_filter_gob_data(gob_filepath, input_geometry)
+    # st.session_state.progress_message = ""
+    # user_warning.empty()
 
 def display_fixed_info_box():
     with st.sidebar.expander("GOB Data Summary", expanded=True):
@@ -142,15 +146,13 @@ def main():
 
     if uploaded_file:
         process_uploaded_file(uploaded_file)
-        if st.session_state.info_box_visible:
-            display_fixed_info_box()
-
         if st.session_state.s2_tokens and st.sidebar.button("Fetch GOB Data", key="download_gob_button"):
             remove_folder_contents(data_dir)
             download_and_process_gob_data(st.session_state.s2_tokens, st.session_state.input_geometry)
-
-    if st.session_state.progress_message:
-        st.sidebar.info(st.session_state.progress_message)
+        if st.session_state.info_box_visible:
+            display_fixed_info_box()
+    # if st.session_state.progress_message:
+    #     st.sidebar.info(st.session_state.progress_message)
 
 if __name__ == "__main__":
     main()
