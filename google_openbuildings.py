@@ -106,6 +106,7 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
     """
     # Define output path
     output_path = os.path.join(data_dir, f'{s2_code}_buildings.csv.gz')
+    st.sidebar.write(f"Downloading data to: {output_path}")
 
     # Check if the file already exists
     if os.path.exists(output_path):
@@ -115,6 +116,7 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
     try:
         # Construct the GCS path
         gcs_path = os.path.join(BUILDING_DOWNLOAD_PATH, f'{s2_code}_buildings.csv.gz')
+        st.sidebar.write(f"Downloading data from: {gcs_path}")
 
         # Open GCS file and get its total size
         with fsspec.open(gcs_path, 'rb', anon=True) as source:
