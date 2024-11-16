@@ -119,7 +119,7 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
         st.sidebar.write(f"Downloading data from: {gcs_path}")
 
         # Open GCS file and get its total size
-        with fsspec.open(gcs_path, 'rb', anon=True) as source:
+        with fsspec.open(gcs_path, 'rb') as source:
             source.seek(0, 2)  # Seek to the end of the file to get its size
             total_size = source.tell()
             source.seek(0)  # Seek back to the start
