@@ -21,8 +21,8 @@ APP_TITLE = "Open Buildings Explorer"
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 
 def setup_app():
-    st.title(APP_TITLE)
-    st.sidebar.title("Controls")
+    # st.title(APP_TITLE)
+    st.sidebar.title("Open Buildings Explorer")
 
 def initialize_session_state():
     for key, default in {
