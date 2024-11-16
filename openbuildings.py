@@ -56,11 +56,14 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
     """
 
     output_path = os.path.join(data_dir, f'{s2_code}_buildings.csv.gz')
+    # print(output_path)
 
     # skip if file exists and return the path
     if os.path.exists(output_path):
+        print(f"File already exists: {output_path}")
         return output_path
-
+    
+    # print("Downloading data...")
     try:
         # Attempt to open and read the file for the provided S2 code.
         with tf.io.gfile.GFile(
@@ -69,6 +72,7 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
             # Create a progress bar
             progress_bar = st.sidebar.progress(0)
             total_rows = 0
+            total_expected_rows = 10_000_000  # Adjust this as per your expected total rows
 
             # Process data in chunks and save directly to the output file in data folder
             with open(output_path, 'wb') as f:
@@ -76,10 +80,11 @@ def download_data_from_s2_code(s2_code: str, data_dir: str) -> Optional[str]:
                 for chunk in csv_chunks:
                     chunk.to_csv(f, mode='ab', index=False, header=False, compression='gzip')
                     total_rows += len(chunk)
-                    progress_bar.progress(total_rows / 100_000)  # Assuming 10 million total rows
-
+                    progress_bar.progress(min(total_rows / total_expected_rows, 1.0))
+            
             progress_bar.empty()
-            return output_path
+        return output_path
+
 
     except tf.errors.NotFoundError:
         return None
