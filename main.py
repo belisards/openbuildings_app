@@ -114,10 +114,11 @@ def download_and_process_gob_data(s2_tokens, input_geometry):
             # user_warning.info(st.session_state.progress_message)
         except Exception as e:
             #st.session_state.progress_message = f"Error downloading GOB data for S2 token: {s2_token}"
+            st.error(f"Detailed error: {str(e)}")
             print(e)
             # user_warning.error(st.session_state.progress_message)
             # user_warning.error(str(e))
-            continue
+            raise
 
     #user_warning.info(st.session_state.progress_message)
     user_warning.info("Filtering GOB data...")
