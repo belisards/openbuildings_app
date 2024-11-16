@@ -1,3 +1,5 @@
+*.csv
+*.gz
 poetry.lock
 data/
 *.lock
